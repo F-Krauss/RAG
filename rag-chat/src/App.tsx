@@ -73,6 +73,7 @@ export default function App() {
         onLogout={() => setIsLoggedIn(false)}
         source={source}
         onChangeSource={setSource}
+        recent={recent}
       >
         {view === 'chat' && <RAGChat theme={theme} lang={lang} />}
         {view === 'library' && <DocsView theme={theme} lang={lang} />}

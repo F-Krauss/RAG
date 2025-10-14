@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Citation, Message, Theme, Attachment } from '../../lib/types';
 import { LS, loadJSON, saveJSON, uuid } from '../../lib/storage';
@@ -53,7 +53,7 @@ export default function RAGChat({
   useEffect(() => saveJSON(LS.messages(activeThreadId), messages), [activeThreadId, messages]);
   useEffect(() => setMessages(loadJSON<Message[]>(LS.messages(activeThreadId), [])), [activeThreadId]);
 
-  // Calcula posición inicial (abajo-izq del botón) y la clampa horizontalmente
+  // Calcula posición inicial del menú (abajo izq del botón) y clampa horizontalmente
   useEffect(() => {
     if (!showTools || !anchorRef.current) return;
     const r = anchorRef.current.getBoundingClientRect();
@@ -66,16 +66,15 @@ export default function RAGChat({
     setMenuPos({ top, left });
   }, [showTools]);
 
-  // Ajusta verticalmente después de montar el menú (si no cabe abajo, lo muestra arriba)
+  // Si no cabe abajo, muévelo arriba
   useEffect(() => {
     if (!showTools || !menuRef.current || !anchorRef.current) return;
     const m = menuRef.current.getBoundingClientRect();
     const vwH = window.innerHeight;
     const margin = 8;
-
     if (m.bottom > vwH - margin) {
       const btn = anchorRef.current.getBoundingClientRect();
-      const newTop = btn.top + window.scrollY - m.height - margin; // arriba del botón
+      const newTop = btn.top + window.scrollY - m.height - margin;
       setMenuPos((pos) => (pos ? { ...pos, top: newTop } : pos));
     }
   }, [showTools]);
@@ -167,14 +166,62 @@ export default function RAGChat({
     setShowSummary(true); setTitle(aiTitle); setAbstract(aiDesc);
   }
 
+  // --- Medidas para alinear footer y evitar overflow
+  const contentRef = useRef<HTMLDivElement | null>(null);
+  const [contentInsets, setContentInsets] = useState<{ left: number; right: number }>({ left: 0, right: 0 });
+
+  const footerRef = useRef<HTMLDivElement | null>(null);
+  const [footerH, setFooterH] = useState(0);
+
+  // Observa tamaño/posición del contenido y ajusta left/right del footer
+  useLayoutEffect(() => {
+    const measure = () => {
+      const el = contentRef.current;
+      if (!el) return;
+      const r = el.getBoundingClientRect();
+      const left  = Math.max(0, Math.round(r.left + window.scrollX));
+      const right = Math.max(0, Math.round(window.innerWidth - r.right + window.scrollX));
+      setContentInsets({ left, right });
+      setFooterH(footerRef.current?.offsetHeight ?? 0);
+    };
+
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (contentRef.current) ro.observe(contentRef.current);
+
+    window.addEventListener('resize', measure);
+    window.addEventListener('scroll', measure, { passive: true });
+
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+      window.removeEventListener('scroll', measure);
+    };
+  }, []);
+
+  // Observa cambios del propio footer (por chips, idioma, etc.)
+  useEffect(() => {
+    const measure = () => setFooterH(footerRef.current?.offsetHeight ?? 0);
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (footerRef.current) ro.observe(footerRef.current);
+    window.addEventListener('resize', measure);
+    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
+  }, []);
+
+  // --- Render
   return (
     <div
-      className={`flex flex-col h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-4rem)] w-full ${
+      ref={contentRef}
+      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${
         theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
       }`}
     >
-      {/* Mensajes */}
-      <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-3">
+      {/* Mensajes (única zona con scroll). Padding inferior = alto real del footer */}
+      <div
+        className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-3"
+        style={{ paddingBottom: `calc(${footerH}px + 12px)` }}
+      >
         {messages.length > 0 ? (
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} theme={theme} />)
         ) : (
@@ -186,14 +233,21 @@ export default function RAGChat({
         )}
       </div>
 
-      {/* Input inferior (responsive y sin desbordes) */}
-      <div className={`border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} bg-inherit`}>
+      {/* Footer FIXED alineado al ancho del contenido (el menú lateral puede cubrirlo con z mayor) */}
+      <div
+        ref={footerRef}
+        className={`fixed bottom-0 z-40 bg-inherit border-t ${
+          theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+        }`}
+        style={{ left: contentInsets.left, right: contentInsets.right }}
+      >
         <form
           onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
-          className="flex flex-col gap-2 px-3 sm:px-4 py-2 sm:py-3 w-full"
+          className="w-full px-3 sm:px-4 pt-3 pb-4 sm:pb-5"
         >
+          {/* Chips de adjuntos/QR */}
           {(pendingAttachments.length > 0 || pendingQR.length > 0) && (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 mb-2">
               {pendingAttachments.map((a) => (
                 <div key={a.id} className="flex items-center gap-2 border rounded-xl px-2 py-1 text-xs sm:text-sm">
                   {a.mime.startsWith('image/') ? (
@@ -212,6 +266,7 @@ export default function RAGChat({
                   </button>
                 </div>
               ))}
+
               {pendingQR.map((q, idx) => (
                 <div key={`qr-${idx}`} className="flex items-center gap-2 border rounded-xl px-2 py-1 text-xs sm:text-sm">
                   <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-900/30">QR</span>
@@ -229,69 +284,73 @@ export default function RAGChat({
             </div>
           )}
 
-          <div className="flex items-center gap-2 w-full">
-            {/* ＋ ancla */}
-            <div className="relative shrink-0">
-              <button
-                ref={anchorRef}
-                type="button"
-                onClick={() => setShowTools((s) => !s)}
-                className="text-xl sm:text-2xl px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                aria-haspopup="menu"
-                aria-expanded={showTools}
-              >
-                ＋
-              </button>
+          {/* Fila responsiva: en móvil botones debajo; en desktop en línea */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
+            {/* ＋ + input */}
+            <div className="flex items-center gap-2 w-full">
+              {/* ＋ ancla */}
+              <div className="relative shrink-0">
+                <button
+                  ref={anchorRef}
+                  type="button"
+                  onClick={() => setShowTools((s) => !s)}
+                  className="text-xl sm:text-2xl px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-haspopup="menu"
+                  aria-expanded={showTools}
+                >
+                  ＋
+                </button>
+              </div>
+
+              {/* Menú en portal */}
+              {showTools && menuPos && createPortal(
+                <>
+                  <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
+                  <div
+                    ref={menuRef}
+                    className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${
+                      theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                    } max-h-[60vh] overflow-auto`}
+                    role="menu"
+                    style={{ top: menuPos.top, left: menuPos.left }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => { setShowTools(false); setShowCamera(true); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-t-xl flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      📷 {t(lang, 'locator', 'takePhoto')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setShowTools(false); setShowQR(true); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-b-xl flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      🔍 {t(lang, 'locator', 'scanQR')}
+                    </button>
+                  </div>
+                </>,
+                document.body
+              )}
+
+              {/* Input */}
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={t(lang, 'chat', 'placeholder')}
+                className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${
+                  theme === 'dark'
+                    ? 'bg-slate-800 border-slate-700 text-slate-100'
+                    : 'bg-white border-slate-300 text-slate-900'
+                } focus:outline-none`}
+              />
             </div>
 
-            {/* Menú en portal */}
-            {showTools && menuPos && createPortal(
-              <>
-                <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
-                <div
-                  ref={menuRef}
-                  className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${
-                    theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-                  } max-h-[60vh] overflow-auto`}
-                  role="menu"
-                  style={{ top: menuPos.top, left: menuPos.left }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => { setShowTools(false); setShowCamera(true); }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-t-xl flex items-center gap-2"
-                    role="menuitem"
-                  >
-                    📷 {t(lang, 'locator', 'takePhoto')}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setShowTools(false); setShowQR(true); }}
-                    className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-b-xl flex items-center gap-2"
-                    role="menuitem"
-                  >
-                    🔍 {t(lang, 'locator', 'scanQR')}
-                  </button>
-                </div>
-              </>,
-              document.body
-            )}
-
-            {/* Input (clave: min-w-0 para poder encoger) */}
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder={t(lang, 'chat', 'placeholder')}
-              className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${
-                theme === 'dark'
-                  ? 'bg-slate-800 border-slate-700 text-slate-100'
-                  : 'bg-white border-slate-300 text-slate-900'
-              } focus:outline-none`}
-            />
-
-            {/* Botones (no crecen) */}
-            <div className="flex gap-2 shrink-0">
+            {/* Botones (debajo en móvil) */}
+            <div className="mt-2 sm:mt-0 flex w-full sm:w-auto justify-end sm:justify-start gap-2">
               <button
                 type="submit"
                 disabled={busy}
