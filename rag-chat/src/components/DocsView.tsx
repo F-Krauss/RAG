@@ -1,78 +1,127 @@
-import React from 'react';
-import type { DocItem } from '../lib/types';
-import { getDocs, saveDocs } from '../lib/storage';
+import React, { useState, useMemo } from "react";
+import type { Lang } from '../lib/i18n';
+import type { Theme } from '../lib/types';
 
-export default function DocsView() {
-  const [docs, setDocs] = React.useState<DocItem[]>(getDocs());
-  const [link, setLink] = React.useState('');
-  const [name, setName] = React.useState('');
+export default function DocsView({
+  theme,
+  lang,
+}: {
+  theme: Theme;
+  lang: Lang;
+}) {
 
-  function onFiles(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files || []).filter(f => f.type === 'application/pdf');
-    const now = Date.now();
-    const added: DocItem[] = files.map(f => ({
-      id: crypto.randomUUID(),
-      kind: 'pdf',
-      name: f.name,
-      size: f.size,
-      url: URL.createObjectURL(f),
-      createdAt: now,
-    }));
-    const next = [...added, ...docs];
-    setDocs(next); saveDocs(next);
-    e.target.value = '';
-  }
+  const [search, setSearch] = useState("");
 
-  function onAddLink() {
-    if (!link) return;
-    const next: DocItem[] = [{ id: crypto.randomUUID(), kind:'link', name: name || link, href: link, createdAt: Date.now() }, ...docs];
-    setDocs(next); saveDocs(next); setLink(''); setName('');
-  }
+  const plants = [
+    {
+      name: "Planta 1",
+      lines: [
+        { name: "Línea de producción 1", files: ["Máquina 1", "Máquina 2", "Máquina 3"] },
+        { name: "Línea de producción 2", files: ["Máquina 1", "Máquina 2", "Máquina 3"] },
+      ],
+    },
+    {
+      name: "Planta 2",
+      lines: [
+        { name: "Línea de producción 1", files: ["Máquina 1", "Máquina 2", "Máquina 3"] },
+        { name: "Línea de producción 2", files: ["Máquina 1", "Máquina 2", "Máquina 3"] },
+      ],
+    },
+    {
+      name: "Planta 3",
+      lines: [
+        { name: "Línea de producción 1", files: ["Máquina 1", "Máquina 2", "Máquina 3"] },
+        { name: "Línea de producción 2", files: ["Máquina 1", "Máquina 2", "Máquina 3"] },
+      ],
+    },
+  ];
 
-  function remove(id: string) {
-    const next = docs.filter(d=>d.id!==id);
-    setDocs(next); saveDocs(next);
-  }
+  const isDark = theme === "dark";
+  const bg = isDark ? "bg-slate-900 text-slate-100" : "bg-white text-slate-900";
+  const card = isDark ? "bg-slate-800 border-slate-700" : "bg-white border-slate-300";
+  const hover = isDark ? "hover:bg-slate-700" : "hover:bg-slate-100";
+  const input = isDark
+    ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
+    : "bg-white border-slate-300 text-slate-900 placeholder-slate-500";
+
+  // 🔍 Filtrado
+  const filteredPlants = useMemo(() => {
+    if (!search.trim()) return plants;
+    const query = search.toLowerCase();
+
+    return plants
+      .map((plant) => ({
+        ...plant,
+        lines: plant.lines
+          .map((line) => ({
+            ...line,
+            files: line.files.filter(
+              (file) =>
+                plant.name.toLowerCase().includes(query) ||
+                line.name.toLowerCase().includes(query) ||
+                file.toLowerCase().includes(query)
+            ),
+          }))
+          .filter((line) => line.files.length > 0),
+      }))
+      .filter((plant) => plant.lines.length > 0);
+  }, [search]);
 
   return (
-    <div className="h-full p-4 overflow-auto space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <label className="px-3 py-2 rounded border cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800">
-          📄 Subir PDFs
-          <input type="file" accept="application/pdf" multiple onChange={onFiles} className="hidden" />
-        </label>
-        <div className="flex items-center gap-2">
-          <input value={name} onChange={e=>setName(e.target.value)} placeholder="Título opcional"
-                 className="px-3 py-2 rounded border bg-transparent" />
-          <input value={link} onChange={e=>setLink(e.target.value)} placeholder="https://…" 
-                 className="px-3 py-2 rounded border bg-transparent w-80" />
-          <button onClick={onAddLink} className="px-3 py-2 rounded border hover:bg-slate-100 dark:hover:bg-slate-800">
-            ➕ Añadir enlace
-          </button>
-        </div>
+    <div className={`p-4 sm:p-6 ${bg}`}>
+      <h1 className="text-xl font-semibold mb-4 flex items-center gap-2">
+        Librería técnica
+      </h1>
+
+      {/* Barra de búsqueda */}
+      <div className="mb-5 flex justify-center">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por planta, línea o máquina..."
+          className={`w-full sm:w-96 px-3 py-2 rounded-xl border ${input} focus:outline-none focus:ring-2 focus:ring-blue-500`}
+        />
       </div>
 
-      <ul className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
-        {docs.map(d=>(
-          <li key={d.id} className="p-3 rounded border hover:bg-slate-50 dark:hover:bg-slate-800/40">
-            <div className="flex items-start gap-3">
-              <div className="text-2xl">{d.kind==='pdf'?'📄':'🔗'}</div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{d.name}</div>
-                <div className="text-xs opacity-60">
-                  {d.kind==='pdf' ? `${(d.size/1024/1024).toFixed(2)} MB` : (d.href)}
-                </div>
-                <div className="mt-2 flex gap-2">
-                  {d.kind==='pdf'
-                    ? <a href={d.url} target="_blank" className="text-sm underline">Ver</a>
-                    : <a href={d.href} target="_blank" className="text-sm underline">Abrir</a>}
-                  <button onClick={()=>remove(d.id)} className="text-sm text-red-600 hover:underline">Eliminar</button>
-                </div>
-              </div>
+      {/* Contenido */}
+      {filteredPlants.length > 0 ? (
+        filteredPlants.map((plant, i) => (
+          <div
+            key={i}
+            className={`mb-5 border rounded-xl shadow-sm transition-colors ${card}`}
+          >
+            <div className={`px-4 py-2 font-semibold text-lg border-b ${hover}`}>
+              {plant.name}
             </div>
-          </li>
-        ))}
-      </ul>
+            <div className="divide-y divide-slate-700/50">
+              {plant.lines.map((line, j) => (
+                <div key={j} className="px-5 py-3">
+                  <div className="font-medium mb-2">🔹 {line.name}</div>
+                  <ul className="ml-4 space-y-1 text-sm">
+                    {line.files.map((file, k) => (
+                      <li
+                        key={k}
+                        className={`opacity-70 ${hover} px-2 py-1 rounded cursor-default select-none transition-colors`}
+                      >
+                        {file}.pdf
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        <div className="text-center opacity-70 mt-10">
+          No se encontraron resultados.
+        </div>
+      )}
+
+      <div className="text-xs opacity-50 text-center mt-6">
+        * Subida de archivos deshabilitada en versión web.
+      </div>
     </div>
   );
 }

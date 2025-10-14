@@ -1,6 +1,20 @@
 import React from 'react';
 import type { Theme } from '../lib/types';
-export default function Login({ theme, t, logoUrl, onLogin }: { theme: Theme; t: (k: string) => string; logoUrl: string; onLogin: () => void }) {
+import type { Lang } from '../lib/i18n';
+
+export default function Login({
+  theme,
+  lang,
+  t,
+  logoUrl,
+  onLogin,
+}: {
+  theme: Theme;
+  lang: Lang;
+  t: (k: string) => string;
+  logoUrl: string;
+  onLogin: () => void;
+}) {
     return (
         <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'} grid place-items-center p-6`}>
             <div className={`${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'} w-full max-w-sm border p-6 rounded-2xl shadow`}>

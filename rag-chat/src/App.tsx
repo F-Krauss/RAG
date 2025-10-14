@@ -1,67 +1,95 @@
-// src/App.tsx
 import React from 'react';
-import './index.css';
 import AppShell from './components/AppShell';
-import Home from './components/Home';
+import RAGChat from './components/chat/RAGChat';
+import BitacoraView from './components/BitacoraView';
+import LocatorView from './components/LocatorView';
+import FAQView from './components/FAQsView';
 import DocsView from './components/DocsView';
 import SupportView from './components/SupportView';
-import FAQsView from './components/FAQsView';
-import RAGChat from './components/chat/RAGChat';
-
-import type { Lang, Theme, View, NavView } from './lib/types';
+import Sidebar from './components/SideBar';
+import Login from './components/Login';
+import type { Theme, DataSource, NavView, ThreadSummary } from './lib/types';
+import { LS, loadJSON } from './lib/storage';
+import { getSavedLang, saveLang, t, type Lang } from './lib/i18n';
 
 export default function App() {
   const [theme, setTheme] = React.useState<Theme>('light');
-  const [lang, setLang] = React.useState<Lang>('es');
-  const [view, setView] = React.useState<View>('home');
-  const [activeThreadId, setActiveThreadId] = React.useState<string | null>(null);
-  const t = (k: string) => k;
-  const plantas = ['Planta Este', 'Planta Oeste', 'Planta Norte', 'Planta Sur'];
+  const [lang, setLang] = React.useState<Lang>(getSavedLang());
+  const [view, setView] = React.useState<NavView>('chat');
+  const [open, setOpen] = React.useState(false);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
+  function handleChangeLang(newLang: Lang) {
+    setLang(newLang);
+    saveLang(newLang);
+    document.title =
+      newLang === 'es'
+        ? 'T-Efficiency | Asistente Técnico'
+        : 'T-Efficiency | Technical Assistant';
+  }
 
+  function handleToggleTheme() {
+    setTheme((t) => (t === 'light' ? 'dark' : 'light'));
+  }
+
+  const [source, setSource] = React.useState<DataSource>({
+    kind: 'plant',
+    id: 'north',
+    name: 'Planta Norte',
+  });
 
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
   }, [theme]);
 
+  const recent = loadJSON<ThreadSummary[]>(LS.threads, [])
+    .sort((a, b) => (b.updatedAt ?? b.createdAt) - (a.updatedAt ?? a.createdAt))
+    .slice(0, 10);
+
+  if (!isLoggedIn) {
+    return (
+      <Login
+        theme={theme}
+        lang={lang}
+        logoUrl="/vite.svg"
+        t={(k: string) => t(lang, 'login', k as any)}
+        onLogin={() => setIsLoggedIn(true)}
+      />
+    );
+  }
+
   return (
-    <AppShell
-      logoUrl="/vite.svg"
-      theme={theme}
-      lang={lang}
-      onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-      onChangeLang={setLang}
-      onNav={(v: NavView) => setView(v)}
-      onSelectThread={(id: string) => {
-        setActiveThreadId(id);
-        setView('chat');
-      }}
+    <div
+      className={`min-h-screen ${
+        theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
+      }`}
     >
-      {view === 'home' && <Home
-          theme={theme}
-          t={t}
-          logoUrl="/vite.svg"
-          plantas={plantas}
-          onSelectPlant={(p: string) => {
-            // aquí podrías guardar la planta seleccionada y abrir el chat
-            setView('chat');
-          }}
-          onOpenDocs={() => setView('docs')}
-        />}
-      {view === 'docs' && <DocsView />}
-      {view === 'support' && <SupportView />}
-      {view === 'faqs' && <FAQsView />}
-      {view === 'history' && (
-        <div className="p-6 text-sm opacity-70">Aquí va el histórico…</div>
-      )}
-      {view === 'chat' && (
-        <RAGChat
-          context={{ plant: undefined, line: undefined }}
-          forceThreadId={activeThreadId ?? undefined}
-          theme={theme}
-          t={(k) => k}
-        />
-      )}
-    </AppShell>
+      <AppShell
+        theme={theme}
+        lang={lang}
+        onChangeLang={handleChangeLang}
+        onToggleTheme={handleToggleTheme}
+        onOpenMenu={() => setOpen(true)}
+        onLogout={() => setIsLoggedIn(false)}
+        source={source}
+        onChangeSource={setSource}
+      >
+        {view === 'chat' && <RAGChat theme={theme} lang={lang} />}
+        {view === 'library' && <DocsView theme={theme} lang={lang} />}
+        {view === 'support' && <SupportView theme={theme} lang={lang} />}
+        {view === 'bitacora' && <BitacoraView theme={theme} lang={lang} />}
+        {view === 'locator' && <LocatorView theme={theme} lang={lang} />}
+        {view === 'faqs' && <FAQView theme={theme} lang={lang} />}
+      </AppShell>
+
+      <Sidebar
+        theme={theme}
+        lang={lang}
+        open={open}
+        onClose={() => setOpen(false)}
+        onSelectView={setView}
+      />
+
+    </div>
   );
 }

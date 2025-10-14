@@ -1,106 +1,165 @@
-// src/components/AppShell.tsx
-import React from 'react';
-import type { Lang, Theme, NavView, ThreadSummary } from '../lib/types';
-import { getRecentThreads } from '../lib/storage';
+import { useState, useEffect, useRef } from 'react';
+import type { Lang } from '../lib/i18n';
+import { t } from '../lib/i18n';
+import type { Theme, DataSource } from '../lib/types';
+import UserMenu from './UserMenu';
 
 type Props = {
   logoUrl?: string;
   theme: Theme;
   lang: Lang;
+  source: DataSource;
   onToggleTheme: () => void;
   onChangeLang: (l: Lang) => void;
-  onNav: (view: NavView) => void;
-  onSelectThread: (id: string) => void;
+  onChangeSource: (s: DataSource) => void;
+  onOpenMenu: () => void;
+  onLogout: () => void;
   children?: React.ReactNode;
 };
 
 export default function AppShell({
-  logoUrl, theme, lang, onToggleTheme, onChangeLang, onNav, onSelectThread, children,
+  logoUrl,
+  theme,
+  lang,
+  source,
+  onToggleTheme,
+  onChangeLang,
+  onChangeSource,
+  onOpenMenu,
+  onLogout,
+  children,
 }: Props) {
-  const [open, setOpen] = React.useState(true);
-  const [recent, setRecent] = React.useState<ThreadSummary[]>([]);
+  const [picker, setPicker] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
+  const [collapsed, setCollapsed] = useState(false);
 
-  React.useEffect(() => setRecent(getRecentThreads(10)), []);
+
+
+  // 🔹 Etiqueta del origen actual traducible
+  const sourceLabel =
+    source.kind === 'plant'
+      ? source.name
+      : source.kind === 'machine'
+        ? `${t(lang, "appShell", 'machine_label')} #${source.id}`
+        : t(lang, "appShell", 'internal_policies');
+
+  // 🔹 Cierra el menú si se hace clic fuera
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const sourceOptions: { id: string; name: string; kind: 'plant' | 'machine' | 'policy' }[] = [
+    { id: 'north', name: t(lang, 'appShell', 'plant_north'), kind: 'plant' },
+    { id: 'south', name: t(lang, 'appShell', 'plant_south'), kind: 'plant' },
+    { id: 'A01', name: `${t(lang, 'appShell', 'machine_label')} A01`, kind: 'machine' },
+  ];
+
 
   return (
-    <div className={`h-screen w-full font-sans ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'} flex`}>
-      {/* Sidebar */}
-      <aside className={`${open ? 'w-72' : 'w-14'} transition-all border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'} flex flex-col`}>
-        <div className="flex items-center gap-2 p-3">
-          <button className="text-xl" onClick={() => setOpen(!open)}>☰</button>
-          {open && <div className="text-sm opacity-70">Menú</div>}
-        </div>
+    <div
+      className={`min-h-screen flex flex-col ${theme === 'dark'
+        ? 'bg-slate-900 text-slate-100'
+        : 'bg-white text-slate-900'
+        }`}
+    >
+      {/* 🔹 Encabezado superior */}
+      <header
+        className={`h-14 flex items-center justify-between px-3 border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+          }`}
+      >
+        {/* Menú lateral + selector de base */}
+        <div className="flex items-center gap-2">
+          <button
+            aria-label={t(lang, "appShell", 'open_menu')}
+            onClick={onOpenMenu}
+            className="sm:hidden px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            ☰
+          </button>
 
-        <nav className="px-2 space-y-1">
-          <Item open={open} label="Principal" icon="🏠" onClick={() => onNav('home')} />
-          <Item open={open} label="Documentación" icon="📚" onClick={() => onNav('docs')} />
-          <Item open={open} label="Histórico" icon="🕘" onClick={() => onNav('history')} />
-          <div className={`mt-4 text-xs px-3 ${open ? 'block' : 'hidden'} opacity-60`}>Últimos chats</div>
-          <div className={`${open ? 'block' : 'hidden'} space-y-1 max-h-64 overflow-auto pr-2`}>
-            {recent.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => onSelectThread(t.id)}
-                className="w-full text-left text-sm truncate px-3 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
-              >
-                {t.title || t.id}
-              </button>
-            ))}
-          </div>
-          <Item open={open} label="Soporte" icon="🆘" onClick={() => onNav('support')} />
-          <Item open={open} label="FAQs" icon="❓" onClick={() => onNav('faqs')} />
-        </nav>
-      </aside>
-
-      {/* Main */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header className={`h-14 flex items-center justify-between px-4 border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'}`}>
-          <div className="flex items-center gap-2">
-            {logoUrl ? <img src={logoUrl} alt="logo" className="h-7" /> : <div className="font-semibold">T-Efficiency</div>}
-          </div>
-          <div className="flex items-center gap-2">
-            <select
-              className="text-sm rounded border px-2 py-1 bg-transparent"
-              value={lang}
-              onChange={(e) => onChangeLang(e.target.value as Lang)}
-              aria-label="language"
+          <div className="relative" ref={pickerRef}>
+            <button
+              onClick={() => setPicker(!picker)}
+              className="px-2 py-1 rounded-xl border text-sm whitespace-nowrap hover:bg-slate-50 dark:hover:bg-slate-800"
             >
-              <option value="es">ES</option>
-              <option value="en">EN</option>
-            </select>
-            <button className="text-sm px-2 py-1 rounded border" onClick={onToggleTheme}>
-              {theme === 'dark' ? '🌙' : '☀️'}
+              {sourceLabel}
             </button>
-            <ProfileMenu />
+
+            {/* 🔹 Menú de selección */}
+            {picker && (
+              <div
+                className={`absolute top-12 left-0 w-52 rounded-xl shadow-lg border z-50 ${theme === 'dark'
+                  ? 'bg-slate-800 border-slate-700'
+                  : 'bg-white border-slate-200'
+                  }`}
+              >
+                <div className="text-xs uppercase px-3 pt-2 opacity-60">
+                  {t(lang, "appShell", 'select_base')}
+                </div>
+                {sourceOptions.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => {
+                      onChangeSource({
+                        kind: opt.kind,
+                        id: opt.id,
+                        name: opt.name,
+                      });
+                      setPicker(false);
+                    }}
+                    className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
+                  >
+                    {opt.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
-        </header>
-
-        <main className="flex-1 min-h-0">{children}</main>
-      </div>
-    </div>
-  );
-}
-
-function Item({ open, label, icon, onClick }: { open: boolean; label: string; icon: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} className="w-full flex items-center gap-2 px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-      <span>{icon}</span>
-      <span className={`${open ? 'block' : 'hidden'} text-sm`}>{label}</span>
-    </button>
-  );
-}
-
-function ProfileMenu() {
-  const [open, setOpen] = React.useState(false);
-  return (
-    <div className="relative">
-      <button onClick={() => setOpen((v) => !v)} className="h-8 w-8 rounded-full bg-slate-200 dark:bg-slate-700 grid place-items-center">👤</button>
-      {open && (
-        <div className="absolute right-0 mt-2 w-48 rounded border bg-white dark:bg-slate-800 dark:border-slate-700 shadow">
-          <button className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Perfil</button>
-          <button className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700">Cerrar sesión</button>
         </div>
-      )}
+
+        {/* 🔹 Usuario + idioma + tema */}
+        <div className="flex items-center gap-1 sm:gap-2">
+          <UserMenu onLogout={onLogout} />
+          <select
+            className="text-sm rounded border px-2 py-1 bg-transparent"
+            value={lang}
+            onChange={(e) => onChangeLang(e.target.value as Lang)}
+            aria-label="language"
+          >
+            <option value="es">ES</option>
+            <option value="en">EN</option>
+          </select>
+          <button
+            className="text-sm px-2 py-1 rounded border"
+            onClick={onToggleTheme}
+          >
+            {theme === 'dark' ? '🌙' : '☀️'}
+          </button>
+          {logoUrl && (
+            <img
+              src={logoUrl}
+              className="h-6 sm:h-7 hidden sm:block"
+              alt="logo"
+            />
+          )}
+        </div>
+      </header>
+
+      {/* 🔹 Contenido principal */}
+      <main
+        className={`flex-1 transition-all duration-300 p-4 ${collapsed ? 'sm:ml-16' : 'sm:ml-64'
+          }`}
+      >
+        {children}
+      </main>
+
+
     </div>
   );
 }

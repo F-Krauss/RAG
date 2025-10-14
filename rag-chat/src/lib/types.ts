@@ -2,52 +2,60 @@
 export type Theme = 'light' | 'dark';
 export type Lang = 'es' | 'en';
 
+export type NavView = 'chat' | 'bitacora' | 'locator' | 'faqs' | 'library' | 'support';
+
+export type Citation = { n: number; title?: string; url: string };
+
+// 👇 (opcional) sube Attachment aquí arriba para legibilidad
 export type Attachment = {
   id: string;
-  name: string;
-  type: string;     // MIME (application/pdf, image/png, etc.)
-  size?: number;
-  b64?: string;     // contenido base64 (solo si subimos archivo)
-};
-
-export type Citation = {
-  n: number;        // índice o número de referencia
-  url: string;
-  title?: string;
+  name: string;       // p. ej. "foto.jpg"
+  mime: string;       // 'image/jpeg' | 'image/png'
+  size?: number;      // bytes
+  dataUrl: string;    // base64 (canvas.toDataURL)
+  createdAt?: number; // timestamp
 };
 
 export type Message = {
   id: string;
   role: 'user' | 'assistant' | 'system';
-  content: string;             // <— RAGChat lo usa como "content"
-  attachments?: Attachment[];
+  content: string;
   citations?: Citation[];
-  createdAt?: number;
+  attachments?: Attachment[];   // 👈 NUEVO: adjuntos opcionales
 };
 
-export type Settings = {
-  model?: string;
-  temperature?: number;
-  topK?: number;
-  webhookUrl?: string;         // <— RAGChat lo referencia
-  apiKey?: string;             // <— RAGChat lo referencia
+export type DataSource = {
+  kind: 'plant' | 'machine' | 'policy';
+  id: string;
+  name: string;
 };
 
 export type ThreadSummary = {
   id: string;
   title: string;
+  createdAt: number;
   updatedAt: number;
+  source?: DataSource;
 };
 
 export type DocItem = {
   id: string;
   name: string;
-  type: 'pdf' | 'link' | 'image' | 'other';
-  url?: string;     // para links o PDFs hosteados
-  b64?: string;     // para archivos cargados
+  mime: string;
   size?: number;
+  link?: string;
+  text?: string;
+  createdAt?: number;
+  updatedAt?: number;
+  isReference?: boolean;
 };
 
-export type NavView = 'home' | 'docs' | 'history' | 'support' | 'faqs';
-export type View = NavView | 'chat';
-
+export interface AppShellProps {
+  theme: Theme;
+  lang: Lang;
+  onChangeLang: (lang: Lang) => void;
+  onToggleTheme: () => void;
+  onOpenMenu: () => void;
+  onLogout: () => void;
+  source: DataSource;
+}
