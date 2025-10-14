@@ -7,7 +7,7 @@ import LocatorView from './components/LocatorView';
 import FAQView from './components/FAQsView';
 import DocsView from './components/DocsView';
 import SupportView from './components/SupportView';
-import Sidebar from './components/SideBar';
+// import Sidebar from './components/SideBar';
 import Login from './components/Login';
 
 import type { Theme, DataSource, NavView, ThreadSummary } from './lib/types';

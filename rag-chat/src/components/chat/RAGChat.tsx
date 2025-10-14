@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
+import { useEffect, useRef, useState, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import type { Citation, Message, Theme, Attachment } from '../../lib/types';
 import { LS, loadJSON, saveJSON, uuid } from '../../lib/storage';
@@ -11,8 +11,8 @@ import CameraModal from './CameraModal';
 import QrScannerModal from './QrScannerModal';
 
 export default function RAGChat({
-  context,
-  forceThreadId,
+  // context,
+  // forceThreadId,
   theme,
   lang,
 }: {
@@ -151,12 +151,12 @@ export default function RAGChat({
   const [showSummary, setShowSummary] = useState(false);
   const [title, setTitle] = useState('');
   const [abstract, setAbstract] = useState('');
-  function handleEndChat() {
-    const userFirst = messages.find((m) => m.role === 'user')?.content ?? t(lang, 'chat', 'title');
-    const aiTitle = `${t(lang, 'summary', 'autoTitlePrefix')} ${userFirst.slice(0, 40)}`;
-    const aiDesc = `${t(lang, 'summary', 'autoDescPrefix')} "${userFirst}".`;
-    setShowSummary(true); setTitle(aiTitle); setAbstract(aiDesc);
-  }
+  // function handleEndChat() {
+  //   const userFirst = messages.find((m) => m.role === 'user')?.content ?? t(lang, 'chat', 'title');
+  //   const aiTitle = `${t(lang, 'summary', 'autoTitlePrefix')} ${userFirst.slice(0, 40)}`;
+  //   const aiDesc = `${t(lang, 'summary', 'autoDescPrefix')} "${userFirst}".`;
+  //   setShowSummary(true); setTitle(aiTitle); setAbstract(aiDesc);
+  // }
 
   // --- Medidas para alinear footer y evitar overflow
   const contentRef = useRef<HTMLDivElement | null>(null);
