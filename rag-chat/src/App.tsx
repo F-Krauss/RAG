@@ -1,3 +1,4 @@
+// src/App.tsx
 import React from 'react';
 import AppShell from './components/AppShell';
 import RAGChat from './components/chat/RAGChat';
@@ -8,6 +9,7 @@ import DocsView from './components/DocsView';
 import SupportView from './components/SupportView';
 import Sidebar from './components/SideBar';
 import Login from './components/Login';
+
 import type { Theme, DataSource, NavView, ThreadSummary } from './lib/types';
 import { LS, loadJSON } from './lib/storage';
 import { getSavedLang, saveLang, t, type Lang } from './lib/i18n';
@@ -16,21 +18,19 @@ export default function App() {
   const [theme, setTheme] = React.useState<Theme>('light');
   const [lang, setLang] = React.useState<Lang>(getSavedLang());
   const [view, setView] = React.useState<NavView>('chat');
-  const [open, setOpen] = React.useState(false);
+  const [open, setOpen] = React.useState(false);           // drawer móvil
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
-  function handleChangeLang(newLang: Lang) {
+  const handleChangeLang = (newLang: Lang) => {
     setLang(newLang);
     saveLang(newLang);
-    document.title =
-      newLang === 'es'
-        ? 'T-Efficiency | Asistente Técnico'
-        : 'T-Efficiency | Technical Assistant';
-  }
+    document.title = newLang === 'es'
+      ? 'T-Efficiency | Asistente Técnico'
+      : 'T-Efficiency | Technical Assistant';
+  };
 
-  function handleToggleTheme() {
+  const handleToggleTheme = () =>
     setTheme((t) => (t === 'light' ? 'dark' : 'light'));
-  }
 
   const [source, setSource] = React.useState<DataSource>({
     kind: 'plant',
@@ -59,38 +59,38 @@ export default function App() {
   }
 
   return (
-    <div
-      className={`min-h-screen ${
-        theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
-      }`}
-    >
+    <div className={`min-h-screen ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'}`}>
       <AppShell
         theme={theme}
         lang={lang}
         onChangeLang={handleChangeLang}
         onToggleTheme={handleToggleTheme}
-        onOpenMenu={() => setOpen(true)}
+        onOpenMenu={() => setOpen(true)}         // abre drawer móvil
         onLogout={() => setIsLoggedIn(false)}
         source={source}
         onChangeSource={setSource}
+        mobileMenuOpen={open}
+        onCloseMobileMenu={() => setOpen(false)}
+        onSelectView={setView}                   // 👈 ahora AppShell puede cambiar la vista
         recent={recent}
       >
-        {view === 'chat' && <RAGChat theme={theme} lang={lang} />}
-        {view === 'library' && <DocsView theme={theme} lang={lang} />}
-        {view === 'support' && <SupportView theme={theme} lang={lang} />}
+        {view === 'chat'     && <RAGChat    theme={theme} lang={lang} />}
+        {view === 'library'  && <DocsView   theme={theme} lang={lang} />}
+        {view === 'support'  && <SupportView theme={theme} lang={lang} />}
         {view === 'bitacora' && <BitacoraView theme={theme} lang={lang} />}
-        {view === 'locator' && <LocatorView theme={theme} lang={lang} />}
-        {view === 'faqs' && <FAQView theme={theme} lang={lang} />}
+        {view === 'locator'  && <LocatorView theme={theme} lang={lang} />}
+        {view === 'faqs'     && <FAQView    theme={theme} lang={lang} />}
       </AppShell>
 
-      <Sidebar
+      {/* Drawer móvil (separado) */}
+      {/* <Sidebar
         theme={theme}
         lang={lang}
         open={open}
         onClose={() => setOpen(false)}
-        onSelectView={setView}
-      />
-
+        onSelectView={(v) => { setView(v); setOpen(false); }}  // cierra y cambia vista
+        recent={recent}
+      /> */}
     </div>
   );
 }

@@ -53,7 +53,7 @@ export default function RAGChat({
   useEffect(() => saveJSON(LS.messages(activeThreadId), messages), [activeThreadId, messages]);
   useEffect(() => setMessages(loadJSON<Message[]>(LS.messages(activeThreadId), [])), [activeThreadId]);
 
-  // Calcula posición inicial del menú (abajo izq del botón) y clampa horizontalmente
+  // Calcula posición del menú (arriba del botón) y clampa horizontalmente
   useEffect(() => {
     if (!showTools || !anchorRef.current) return;
     const r = anchorRef.current.getBoundingClientRect();
@@ -62,22 +62,14 @@ export default function RAGChat({
     const approxWidth = 224; // ≈ w-56
     let left = r.left + window.scrollX;
     left = Math.min(Math.max(left, margin + window.scrollX), vw - approxWidth - margin + window.scrollX);
-    const top = r.bottom + window.scrollY + margin; // abajo por defecto
+
+    // 👇 en lugar de r.bottom + margin, usamos r.top - altura del menú - margin
+    const estimatedMenuHeight = 100; // altura estimada (ajustable)
+    const top = r.top + window.scrollY - estimatedMenuHeight - margin;
     setMenuPos({ top, left });
   }, [showTools]);
 
-  // Si no cabe abajo, muévelo arriba
-  useEffect(() => {
-    if (!showTools || !menuRef.current || !anchorRef.current) return;
-    const m = menuRef.current.getBoundingClientRect();
-    const vwH = window.innerHeight;
-    const margin = 8;
-    if (m.bottom > vwH - margin) {
-      const btn = anchorRef.current.getBoundingClientRect();
-      const newTop = btn.top + window.scrollY - m.height - margin;
-      setMenuPos((pos) => (pos ? { ...pos, top: newTop } : pos));
-    }
-  }, [showTools]);
+
 
   // Reposiciona si hay scroll/resize con el menú abierto
   useEffect(() => {
@@ -141,10 +133,10 @@ export default function RAGChat({
         ts.map((h) =>
           h.id === activeThreadId
             ? {
-                ...h,
-                title: (text || 'Mensaje con adjuntos').slice(0, 42) + ((text || '').length > 42 ? '…' : ''),
-                updatedAt: Date.now(),
-              }
+              ...h,
+              title: (text || 'Mensaje con adjuntos').slice(0, 42) + ((text || '').length > 42 ? '…' : ''),
+              updatedAt: Date.now(),
+            }
             : h
         )
       );
@@ -179,7 +171,7 @@ export default function RAGChat({
       const el = contentRef.current;
       if (!el) return;
       const r = el.getBoundingClientRect();
-      const left  = Math.max(0, Math.round(r.left + window.scrollX));
+      const left = Math.max(0, Math.round(r.left + window.scrollX));
       const right = Math.max(0, Math.round(window.innerWidth - r.right + window.scrollX));
       setContentInsets({ left, right });
       setFooterH(footerRef.current?.offsetHeight ?? 0);
@@ -213,9 +205,8 @@ export default function RAGChat({
   return (
     <div
       ref={contentRef}
-      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${
-        theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
-      }`}
+      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
+        }`}
     >
       {/* Mensajes (única zona con scroll). Padding inferior = alto real del footer */}
       <div
@@ -236,9 +227,8 @@ export default function RAGChat({
       {/* Footer FIXED alineado al ancho del contenido (el menú lateral puede cubrirlo con z mayor) */}
       <div
         ref={footerRef}
-        className={`fixed bottom-0 z-40 bg-inherit border-t ${
-          theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
-        }`}
+        className={`fixed bottom-0 z-40 bg-inherit border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+          }`}
         style={{ left: contentInsets.left, right: contentInsets.right }}
       >
         <form
@@ -308,9 +298,8 @@ export default function RAGChat({
                   <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
                   <div
                     ref={menuRef}
-                    className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${
-                      theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-                    } max-h-[60vh] overflow-auto`}
+                    className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                      } max-h-[60vh] overflow-auto`}
                     role="menu"
                     style={{ top: menuPos.top, left: menuPos.left }}
                   >
@@ -341,11 +330,10 @@ export default function RAGChat({
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t(lang, 'chat', 'placeholder')}
-                className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${
-                  theme === 'dark'
+                className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${theme === 'dark'
                     ? 'bg-slate-800 border-slate-700 text-slate-100'
                     : 'bg-white border-slate-300 text-slate-900'
-                } focus:outline-none`}
+                  } focus:outline-none`}
               />
             </div>
 

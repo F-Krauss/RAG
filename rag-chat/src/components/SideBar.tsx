@@ -1,3 +1,5 @@
+// src/SideBar.tsx
+
 import React from 'react';
 import type { Theme, NavView, ThreadSummary } from '../lib/types';
 import type { Lang } from '../lib/i18n';
