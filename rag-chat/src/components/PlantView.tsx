@@ -1,6 +1,6 @@
-import React from 'react';
+// import React from 'react';
 import type { Theme } from '../lib/types';
-import type { Lang } from '../lib/i18n';
+// import type { Lang } from '../lib/i18n';
 
 
 export default function PlantView({ theme, t, plant, lines, onBack, onSelectLine }: { theme: Theme; t: (k: string) => string; plant: string | null; lines: string[]; onBack: () => void; onSelectLine: (l: string) => void }) {

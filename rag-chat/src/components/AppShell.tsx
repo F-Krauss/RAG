@@ -23,7 +23,6 @@ type Props = {
   recent?: ThreadSummary[];
   children?: React.ReactNode;
 
-  // 👇 agregamos estas dos líneas nuevas
   mobileMenuOpen?: boolean;
   onCloseMobileMenu?: () => void;
 };
@@ -42,7 +41,6 @@ export default function AppShell({
   recent = [],
   children,
 
-  // 👇 y también las recibimos en la función
   mobileMenuOpen,
   onCloseMobileMenu,
 }: Props) {
@@ -104,7 +102,6 @@ export default function AppShell({
           : 'bg-white text-slate-900'
       }`}
     >
-      {/* Header */}
       <header
         className={`h-14 flex items-center justify-between px-3 border-b ${
           theme === 'dark' ? 'border-slate-800' : 'border-slate-200'

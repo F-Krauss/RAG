@@ -1,10 +1,10 @@
-import React from 'react';
+// import React from 'react';
 import type { Theme } from '../lib/types';
 import type { Lang } from '../lib/i18n';
 
 export default function Login({
   theme,
-  lang,
+//   lang,
   t,
   logoUrl,
   onLogin,

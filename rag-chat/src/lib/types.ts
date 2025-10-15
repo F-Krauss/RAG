@@ -6,14 +6,14 @@ export type NavView = 'chat' | 'bitacora' | 'locator' | 'faqs' | 'library' | 'su
 
 export type Citation = { n: number; title?: string; url: string };
 
-// 👇 (opcional) sube Attachment aquí arriba para legibilidad
+
 export type Attachment = {
   id: string;
-  name: string;       // p. ej. "foto.jpg"
-  mime: string;       // 'image/jpeg' | 'image/png'
-  size?: number;      // bytes
-  dataUrl: string;    // base64 (canvas.toDataURL)
-  createdAt?: number; // timestamp
+  name: string;       
+  mime: string;       
+  size?: number;      
+  dataUrl: string;    
+  createdAt?: number; 
 };
 
 export type Message = {
@@ -21,7 +21,7 @@ export type Message = {
   role: 'user' | 'assistant' | 'system';
   content: string;
   citations?: Citation[];
-  attachments?: Attachment[];   // 👈 NUEVO: adjuntos opcionales
+  attachments?: Attachment[];  
 };
 
 export type DataSource = {

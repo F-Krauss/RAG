@@ -18,7 +18,7 @@ export default function App() {
   const [theme, setTheme] = React.useState<Theme>('light');
   const [lang, setLang] = React.useState<Lang>(getSavedLang());
   const [view, setView] = React.useState<NavView>('chat');
-  const [open, setOpen] = React.useState(false);           // drawer móvil
+  const [open, setOpen] = React.useState(false);           
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
 
   const handleChangeLang = (newLang: Lang) => {
@@ -65,13 +65,13 @@ export default function App() {
         lang={lang}
         onChangeLang={handleChangeLang}
         onToggleTheme={handleToggleTheme}
-        onOpenMenu={() => setOpen(true)}         // abre drawer móvil
+        onOpenMenu={() => setOpen(true)}        
         onLogout={() => setIsLoggedIn(false)}
         source={source}
         onChangeSource={setSource}
         mobileMenuOpen={open}
         onCloseMobileMenu={() => setOpen(false)}
-        onSelectView={setView}                   // 👈 ahora AppShell puede cambiar la vista
+        onSelectView={setView}
         recent={recent}
       >
         {view === 'chat'     && <RAGChat    theme={theme} lang={lang} />}

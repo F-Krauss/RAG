@@ -12,8 +12,8 @@ type Props = {
   onClose: () => void;
   onSelectView: (view: NavView) => void;
   recent?: ThreadSummary[];
-  open?: boolean;        // drawer móvil
-  collapsed?: boolean;   // lo maneja AppShell; aquí solo leemos
+  open?: boolean;        
+  collapsed?: boolean;  
 };
 
 export default function Sidebar({
@@ -40,10 +40,9 @@ export default function Sidebar({
 
   return (
     <>
-      {/* 🖥️ Desktop: dentro de la columna del grid (NO fixed, NO ancho propio) */}
       <aside
         className={`hidden sm:flex flex-col h-[calc(100vh-60px)] overflow-y-auto transition-all duration-300
-        ${bgColor} w-full p-3`}  // ← w-full, sin w-64/w-16
+        ${bgColor} w-full p-3`}  
       >
         {!collapsed && (
           <div className="mb-6 sticky top-0 bg-inherit z-10">
@@ -81,7 +80,6 @@ export default function Sidebar({
         )}
       </aside>
 
-      {/* 📱 Móvil: drawer con overlay (este sí es fixed) */}
       <div
         className={`fixed inset-0 z-50 sm:hidden transition-opacity duration-300 ${
           open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
