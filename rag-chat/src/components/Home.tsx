@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import type { Theme } from '../lib/types';
 export default function Home({ theme, t, logoUrl, plantas, onSelectPlant, onOpenDocs }: { theme: Theme; t: (k: string) => string; logoUrl: string; plantas: string[]; onSelectPlant: (p: string) => void; onOpenDocs: () => void }) {
     return (

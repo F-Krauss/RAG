@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import type { Lang } from '../lib/i18n';
 import type { Theme } from '../lib/types';
 
 export default function DocsView({
   theme,
-  lang,
+  // lang,
 }: {
   theme: Theme;
   lang: Lang;
@@ -44,7 +44,6 @@ export default function DocsView({
     ? "bg-slate-800 border-slate-700 text-slate-100 placeholder-slate-400"
     : "bg-white border-slate-300 text-slate-900 placeholder-slate-500";
 
-  // 🔍 Filtrado
   const filteredPlants = useMemo(() => {
     if (!search.trim()) return plants;
     const query = search.toLowerCase();
@@ -73,7 +72,6 @@ export default function DocsView({
         Librería técnica
       </h1>
 
-      {/* Barra de búsqueda */}
       <div className="mb-5 flex justify-center">
         <input
           type="text"
@@ -84,7 +82,6 @@ export default function DocsView({
         />
       </div>
 
-      {/* Contenido */}
       {filteredPlants.length > 0 ? (
         filteredPlants.map((plant, i) => (
           <div

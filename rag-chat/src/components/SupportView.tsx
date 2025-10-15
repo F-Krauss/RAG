@@ -1,4 +1,4 @@
-import React from 'react';
+// import React from 'react';
 import type { Theme } from '../lib/types';
 import type { Lang } from '../lib/i18n';
 import { t } from '../lib/i18n';
