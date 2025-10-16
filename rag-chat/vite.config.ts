@@ -4,7 +4,7 @@ import fs from 'fs';
 import path from 'path';
 
 export default defineConfig({
-  base: '/RAG_Empresarial/',
+  base: '/RAG_BETA/',
   plugins: [react()],
 
   resolve: {

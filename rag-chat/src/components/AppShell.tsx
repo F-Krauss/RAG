@@ -52,8 +52,8 @@ export default function AppShell({
     source.kind === 'plant'
       ? source.name
       : source.kind === 'machine'
-      ? `${t(lang, 'appShell', 'machine_label')} #${source.id}`
-      : t(lang, 'appShell', 'internal_policies');
+        ? `${t(lang, 'appShell', 'machine_label')} #${source.id}`
+        : t(lang, 'appShell', 'internal_policies');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -94,21 +94,24 @@ export default function AppShell({
     };
   }, []);
 
+  const HEADER_H = 56; // px (h-14)
+  const sidebarW = isDesktop
+    ? (collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_OPEN)
+    : 0;
+
+
   return (
     <div
-      className={`min-h-screen flex flex-col overflow-x-hidden ${
-        theme === 'dark'
-          ? 'bg-slate-900 text-slate-100'
-          : 'bg-white text-slate-900'
-      }`}
-    >
-      <header
-        className={`h-14 flex items-center justify-between px-3 border-b ${
-          theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+      className={`h-screen overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
         }`}
+    >
+      {/* HEADER FIJO */}
+      <header
+        className={`fixed top-0 inset-x-0 z-50 h-14 flex items-center justify-between px-3 border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+          } bg-inherit`}
       >
         <div className="flex items-center gap-2">
-          {/* Drawer móvil */}
+          {/* (Opcional) Botón menú móvil */}
           <button
             aria-label={t(lang, 'appShell', 'open_menu')}
             onClick={onOpenMenu}
@@ -128,40 +131,21 @@ export default function AppShell({
 
             {picker && (
               <div
-                className={`absolute top-12 left-0 w-52 rounded-xl shadow-lg border z-50 ${
-                  theme === 'dark'
-                    ? 'bg-slate-800 border-slate-700'
-                    : 'bg-white border-slate-200'
-                }`}
+                className={`absolute top-12 left-0 w-52 rounded-xl shadow-lg border z-50 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                  }`}
               >
                 <div className="text-xs uppercase px-3 pt-2 opacity-60">
                   {t(lang, 'appShell', 'select_base')}
                 </div>
                 {[
-                  {
-                    id: 'north',
-                    name: t(lang, 'appShell', 'plant_north'),
-                    kind: 'plant' as const,
-                  },
-                  {
-                    id: 'south',
-                    name: t(lang, 'appShell', 'plant_south'),
-                    kind: 'plant' as const,
-                  },
-                  {
-                    id: 'A01',
-                    name: `${t(lang, 'appShell', 'machine_label')} A01`,
-                    kind: 'machine' as const,
-                  },
+                  { id: 'north', name: t(lang, 'appShell', 'plant_north'), kind: 'plant' as const },
+                  { id: 'south', name: t(lang, 'appShell', 'plant_south'), kind: 'plant' as const },
+                  { id: 'A01', name: `${t(lang, 'appShell', 'machine_label')} A01`, kind: 'machine' as const },
                 ].map((opt) => (
                   <button
                     key={opt.id}
                     onClick={() => {
-                      onChangeSource({
-                        kind: opt.kind,
-                        id: opt.id,
-                        name: opt.name,
-                      });
+                      onChangeSource({ kind: opt.kind, id: opt.id, name: opt.name });
                       setPicker(false);
                     }}
                     className="block w-full text-left px-3 py-2 text-sm hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -186,73 +170,62 @@ export default function AppShell({
             <option value="es">ES</option>
             <option value="en">EN</option>
           </select>
-          <button
-            className="text-sm px-2 py-1 rounded border"
-            onClick={onToggleTheme}
-          >
+          <button className="text-sm px-2 py-1 rounded border" onClick={onToggleTheme}>
             {theme === 'dark' ? '🌙' : '☀️'}
           </button>
-          {logoUrl && (
-            <img
-              src={logoUrl}
-              className="h-6 sm:h-7 hidden sm:block"
-              alt="logo"
-            />
-          )}
+          {logoUrl && <img src={logoUrl} className="h-6 sm:h-7 hidden sm:block" alt="logo" />}
         </div>
       </header>
 
-      {/* Layout principal */}
-      <div
-        className="relative flex-1 grid transition-[grid-template-columns] duration-300"
+      {/* BOTÓN COLAPSAR FIJO (debajo del header, pegado al borde del sidebar) */}
+      <button
+        onClick={() => setCollapsed((s) => !s)}
+        className="hidden sm:flex items-center justify-center fixed z-40 rounded-full border shadow bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 w-6 h-6"
+        style={{ left: sidebarW, top: HEADER_H + 8 }}
+        aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+        title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
+      >
+        {collapsed ? '›' : '‹'}
+      </button>
+
+      {/* SIDEBAR FIJO (desktop) */}
+      <aside
+        className={`hidden sm:block fixed top-14 bottom-0 left-0 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+          } bg-inherit overflow-y-auto`}
+        style={{ width: sidebarW }}
+      >
+        <Sidebar
+          variant="desktop"
+          theme={theme}
+          lang={lang}
+          open={false}
+          onClose={() => { }}
+          collapsed={collapsed}
+          onSelectView={onSelectView}
+          recent={recent}
+        />
+      </aside>
+
+      {/* CONTENIDO: solo esta columna hace scroll */}
+      <main
+        className="relative"
         style={{
-          gridTemplateColumns: isDesktop
-            ? `minmax(0, ${collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_OPEN}px) 1fr`
-            : '1fr',
+          paddingTop: HEADER_H,
+          marginLeft: sidebarW,
         }}
       >
-        {/* Botón colapsar */}
-        <button
-          onClick={() => setCollapsed((s) => !s)}
-          className="hidden sm:flex items-center justify-center absolute top-2 z-40 -translate-x-1/2 rounded-full border shadow bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 w-6 h-6"
-          style={{
-            left: collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_OPEN,
-          }}
-          aria-label={collapsed ? 'Expandir menú' : 'Colapsar menú'}
-          title={collapsed ? 'Expandir menú' : 'Colapsar menú'}
-        >
-          {collapsed ? '›' : '‹'}
-        </button>
-
-        {/* Sidebar desktop */}
-        <div
-          className={`hidden sm:block border-r ${
-            theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
-          }`}
-        >
-          <Sidebar
-            theme={theme}
-            lang={lang}
-            open={false}
-            onClose={() => {}}
-            collapsed={collapsed}
-            onSelectView={onSelectView}
-            recent={recent}
-          />
+        <div className="h-[calc(100vh-56px)] overflow-y-auto p-3 sm:p-4">
+          {children}
         </div>
+      </main>
 
-        {/* Contenido */}
-        <main className="relative min-w-0">
-          <div className="h-full w-full p-3 sm:p-4">{children}</div>
-        </main>
-      </div>
-
-      {/* 📱 Sidebar móvil */}
+      {/* 📱 Sidebar móvil superpuesto (se muestra solo en sm<) */}
       <Sidebar
+        variant="mobile"
         theme={theme}
         lang={lang}
         open={mobileMenuOpen}
-        onClose={onCloseMobileMenu || (() => {})}
+        onClose={onCloseMobileMenu || (() => { })}
         onSelectView={(v) => {
           onSelectView(v);
           onCloseMobileMenu?.();

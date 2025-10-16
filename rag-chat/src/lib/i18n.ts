@@ -66,6 +66,7 @@ export const DICT = {
         'Escanea un QR, ingresa un ID de máquina o comienza a escribir.',
       thinking: 'Pensando…',
       demoCitation: 'Manual de mantenimiento',
+      newChat: 'Nuevo chat',
     },
 
     // -------------------------
@@ -188,6 +189,7 @@ export const DICT = {
       emptyState: 'Scan a QR code, enter a machine ID, or start typing.',
       thinking: 'Thinking…',
       demoCitation: 'Maintenance Manual',
+      newChat: 'New chat',
     },
 
     summary: {

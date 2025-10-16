@@ -7,14 +7,10 @@ import ChatSummaryModal from './ChatSummaryModal';
 import type { Lang } from '../../lib/i18n';
 import { t } from '../../lib/i18n';
 import { postToN8N } from '../../lib/api';
-
-
 import CameraModal from './CameraModal';
 import QrScannerModal from './QrScannerModal';
 
 export default function RAGChat({
-  // context,
-  // forceThreadId,
   theme,
   lang,
 }: {
@@ -32,12 +28,19 @@ export default function RAGChat({
     return [t0];
   });
 
-  const [activeThreadId] = useState<string>(threads[0].id);
-  const [messages, setMessages] = useState<Message[]>(
-    () => loadJSON<Message[]>(LS.messages(activeThreadId), [])
-  );
+  const [activeThreadId, setActiveThreadId] = useState<string>(threads[0].id);
+  const [messages, setMessages] = useState<Message[]>(() => loadJSON<Message[]>(LS.messages(activeThreadId), []));
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
+
+  function newChat() {
+    const newT = { id: uuid(), title: t(lang, 'chat', 'title'), createdAt: Date.now(), updatedAt: Date.now() };
+    setThreads(prev => [newT, ...prev]);
+    saveJSON(LS.threads, [newT, ...threads]);
+    setActiveThreadId(newT.id);
+    setMessages([]);
+    saveJSON(LS.messages(newT.id), []);
+  }
 
   // --- Adjuntos / QR
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
@@ -45,7 +48,7 @@ export default function RAGChat({
   const [showCamera, setShowCamera] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
-  // --- Menú ＋ con portal y clamp a viewport
+  // --- Menú ＋
   const [showTools, setShowTools] = useState(false);
   const anchorRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -55,24 +58,20 @@ export default function RAGChat({
   useEffect(() => saveJSON(LS.messages(activeThreadId), messages), [activeThreadId, messages]);
   useEffect(() => setMessages(loadJSON<Message[]>(LS.messages(activeThreadId), [])), [activeThreadId]);
 
-  // Calcula posición del menú (arriba del botón) y clampa horizontalmente
+  // --- Posiciona el menú flotante
   useEffect(() => {
     if (!showTools || !anchorRef.current) return;
     const r = anchorRef.current.getBoundingClientRect();
     const vw = window.innerWidth;
     const margin = 8;
-    const approxWidth = 224; // ≈ w-56
+    const approxWidth = 224;
     let left = r.left + window.scrollX;
     left = Math.min(Math.max(left, margin + window.scrollX), vw - approxWidth - margin + window.scrollX);
-
-    const estimatedMenuHeight = 100; // altura estimada (ajustable)
-    const top = r.top + window.scrollY - estimatedMenuHeight - margin;
+    const top = r.top + window.scrollY - 100 - margin;
     setMenuPos({ top, left });
   }, [showTools]);
 
-
-
-  // Reposiciona si hay scroll/resize con el menú abierto
+  // --- Reposiciona al hacer scroll o resize
   useEffect(() => {
     if (!showTools) return;
     const handler = () => {
@@ -94,7 +93,7 @@ export default function RAGChat({
     };
   }, [showTools]);
 
-  // --- Envío (incluye adjuntos y QRs)
+  // --- Envío al servidor (con manejo robusto de error)
   async function sendMessage() {
     const text = input.trim();
     if ((!text && pendingAttachments.length === 0 && pendingQR.length === 0) || busy) return;
@@ -102,8 +101,7 @@ export default function RAGChat({
     setInput('');
     setBusy(true);
 
-    const qrBlock = pendingQR.length ? `\n\nQR:\n${pendingQR.map((q) => `• ${q}`).join('\n')}` : '';
-
+    const qrBlock = pendingQR.length ? `\n\nQR:\n${pendingQR.map(q => `• ${q}`).join('\n')}` : '';
     const userMsg: Message = {
       id: uuid(),
       role: 'user',
@@ -112,7 +110,7 @@ export default function RAGChat({
     };
 
     const loading: Message = { id: uuid(), role: 'assistant', content: t(lang, 'chat', 'thinking') };
-    setMessages((p) => [...p, userMsg, loading]);
+    setMessages(p => [...p, userMsg, loading]);
 
     try {
       const payload = {
@@ -125,15 +123,9 @@ export default function RAGChat({
         meta: { lang, theme, ts: Date.now() },
       };
 
-      type RawCitation = { n?: number; title?: string; url?: string };
-      const data: {
-        reply: string;
-        citations?: RawCitation[];
-        threadTitle?: string;
-      } = await postToN8N(payload);
+      const data = await postToN8N(payload);
 
-      // Normaliza a tu tipo interno (n es requerido)
-      const normalized: Citation[] | undefined = data.citations?.map((c, i) => ({
+      const normalized: Citation[] | undefined = data?.citations?.map((c: any, i: number) => ({
         n: typeof c.n === 'number' ? c.n : i + 1,
         title: c.title ?? 'Fuente',
         url: c.url ?? '',
@@ -144,22 +136,17 @@ export default function RAGChat({
         updated[updated.length - 1] = {
           id: uuid(),
           role: 'assistant',
-          content: data.reply ?? '(sin respuesta)',
-          citations: normalized, // 👈 ahora coincide con tu tipo
+          content: data?.reply ?? '(sin respuesta)',
+          citations: normalized,
         };
         return updated;
       });
 
-
-      const newTitle = data.threadTitle || (text || 'Mensaje con adjuntos');
+      const newTitle = data?.threadTitle || text || 'Mensaje con adjuntos';
       setThreads(ts =>
         ts.map(h =>
           h.id === activeThreadId
-            ? {
-              ...h,
-              title: newTitle.slice(0, 42) + (newTitle.length > 42 ? '…' : ''),
-              updatedAt: Date.now(),
-            }
+            ? { ...h, title: newTitle.slice(0, 42) + (newTitle.length > 42 ? '…' : ''), updatedAt: Date.now() }
             : h
         )
       );
@@ -178,28 +165,19 @@ export default function RAGChat({
       setPendingAttachments([]);
       setPendingQR([]);
     }
-
   }
 
   // --- Finalizar chat
   const [showSummary, setShowSummary] = useState(false);
   const [title, setTitle] = useState('');
   const [abstract, setAbstract] = useState('');
-  // function handleEndChat() {
-  //   const userFirst = messages.find((m) => m.role === 'user')?.content ?? t(lang, 'chat', 'title');
-  //   const aiTitle = `${t(lang, 'summary', 'autoTitlePrefix')} ${userFirst.slice(0, 40)}`;
-  //   const aiDesc = `${t(lang, 'summary', 'autoDescPrefix')} "${userFirst}".`;
-  //   setShowSummary(true); setTitle(aiTitle); setAbstract(aiDesc);
-  // }
 
-  // --- Medidas para alinear footer y evitar overflow
+  // --- Ajustes visuales
   const contentRef = useRef<HTMLDivElement | null>(null);
-  const [contentInsets, setContentInsets] = useState<{ left: number; right: number }>({ left: 0, right: 0 });
-
   const footerRef = useRef<HTMLDivElement | null>(null);
   const [footerH, setFooterH] = useState(0);
+  const [contentInsets, setContentInsets] = useState<{ left: number; right: number }>({ left: 0, right: 0 });
 
-  // Observa tamaño/posición del contenido y ajusta left/right del footer
   useLayoutEffect(() => {
     const measure = () => {
       const el = contentRef.current;
@@ -210,14 +188,11 @@ export default function RAGChat({
       setContentInsets({ left, right });
       setFooterH(footerRef.current?.offsetHeight ?? 0);
     };
-
     measure();
     const ro = new ResizeObserver(measure);
     if (contentRef.current) ro.observe(contentRef.current);
-
     window.addEventListener('resize', measure);
     window.addEventListener('scroll', measure, { passive: true });
-
     return () => {
       ro.disconnect();
       window.removeEventListener('resize', measure);
@@ -225,30 +200,34 @@ export default function RAGChat({
     };
   }, []);
 
-  // Observa cambios del propio footer (por chips, idioma, etc.)
-  useEffect(() => {
-    const measure = () => setFooterH(footerRef.current?.offsetHeight ?? 0);
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (footerRef.current) ro.observe(footerRef.current);
-    window.addEventListener('resize', measure);
-    return () => { ro.disconnect(); window.removeEventListener('resize', measure); };
-  }, []);
-
   // --- Render
   return (
     <div
       ref={contentRef}
-      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
-        }`}
+      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${
+        theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
+      }`}
     >
-      {/* Mensajes (única zona con scroll). Padding inferior = alto real del footer */}
+      {/* Botón de nuevo chat */}
+      <div className="flex justify-end px-3 sm:px-4 pt-3">
+        <button
+  type="button"
+  onClick={newChat}
+  className="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+  title={t(lang, 'chat', 'newChat') || 'Nuevo chat'}
+>
+  ＋ Nuevo chat
+</button>
+
+      </div>
+
+      {/* Mensajes */}
       <div
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-3"
         style={{ paddingBottom: `calc(${footerH}px + 12px)` }}
       >
         {messages.length > 0 ? (
-          messages.map((msg) => <MessageBubble key={msg.id} message={msg} theme={theme} />)
+          messages.map(msg => <MessageBubble key={msg.id} message={msg} theme={theme} />)
         ) : (
           <div className="flex items-center justify-center h-full text-center">
             <div className="max-w-[90%] text-base sm:text-lg opacity-80 leading-snug">
@@ -258,120 +237,90 @@ export default function RAGChat({
         )}
       </div>
 
-      {/* Footer FIXED alineado al ancho del contenido (el menú lateral puede cubrirlo con z mayor) */}
+      {/* Footer */}
       <div
         ref={footerRef}
-        className={`fixed bottom-0 z-40 bg-inherit border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
-          }`}
+        className={`fixed bottom-0 z-40 bg-inherit border-t ${
+          theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+        }`}
         style={{ left: contentInsets.left, right: contentInsets.right }}
       >
         <form
-          onSubmit={(e) => { e.preventDefault(); sendMessage(); }}
+          onSubmit={e => {
+            e.preventDefault();
+            sendMessage();
+          }}
           className="w-full px-3 sm:px-4 pt-3 pb-4 sm:pb-5"
         >
-          {/* Chips de adjuntos/QR */}
-          {(pendingAttachments.length > 0 || pendingQR.length > 0) && (
-            <div className="flex flex-wrap gap-2 mb-2">
-              {pendingAttachments.map((a) => (
-                <div key={a.id} className="flex items-center gap-2 border rounded-xl px-2 py-1 text-xs sm:text-sm">
-                  {a.mime.startsWith('image/') ? (
-                    <img src={a.dataUrl} alt={a.name} className="w-7 h-7 sm:w-8 sm:h-8 rounded object-cover border" />
-                  ) : (
-                    <span className="text-[10px] sm:text-xs px-2 py-1 rounded bg-slate-100 dark:bg-slate-800">FILE</span>
-                  )}
-                  <span className="max-w-[120px] sm:max-w-[160px] truncate">{a.name}</span>
-                  <button
-                    type="button"
-                    aria-label="Eliminar adjunto"
-                    onClick={() => setPendingAttachments((p) => p.filter((x) => x.id !== a.id))}
-                    className="opacity-70 hover:opacity-100"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-
-              {pendingQR.map((q, idx) => (
-                <div key={`qr-${idx}`} className="flex items-center gap-2 border rounded-xl px-2 py-1 text-xs sm:text-sm">
-                  <span className="text-[10px] sm:text-xs px-2 py-0.5 rounded bg-green-100 dark:bg-green-900/30">QR</span>
-                  <span className="max-w-[160px] sm:max-w-[220px] truncate">{q}</span>
-                  <button
-                    type="button"
-                    aria-label="Eliminar QR"
-                    onClick={() => setPendingQR((p) => p.filter((_, i) => i !== idx))}
-                    className="opacity-70 hover:opacity-100"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Fila responsiva: en móvil botones debajo; en desktop en línea */}
+          {/* Input y botones */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
-            {/* ＋ + input */}
             <div className="flex items-center gap-2 w-full">
-              {/* ＋ ancla */}
-              <div className="relative shrink-0">
-                <button
-                  ref={anchorRef}
-                  type="button"
-                  onClick={() => setShowTools((s) => !s)}
-                  className="text-xl sm:text-2xl px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-                  aria-haspopup="menu"
-                  aria-expanded={showTools}
-                >
-                  ＋
-                </button>
-              </div>
+  {/* ＋ ancla */}
+  <div className="relative shrink-0">
+    <button
+      ref={anchorRef}
+      type="button"
+      onClick={() => setShowTools((s) => !s)}
+      className="text-xl sm:text-2xl px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+      aria-haspopup="menu"
+      aria-expanded={showTools}
+      title="+"
+    >
+      ＋
+    </button>
+  </div>
 
-              {/* Menú en portal */}
-              {showTools && menuPos && createPortal(
-                <>
-                  <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
-                  <div
-                    ref={menuRef}
-                    className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-                      } max-h-[60vh] overflow-auto`}
-                    role="menu"
-                    style={{ top: menuPos.top, left: menuPos.left }}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => { setShowTools(false); setShowCamera(true); }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-t-xl flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      📷 {t(lang, 'locator', 'takePhoto')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowTools(false); setShowQR(true); }}
-                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-b-xl flex items-center gap-2"
-                      role="menuitem"
-                    >
-                      🔍 {t(lang, 'locator', 'scanQR')}
-                    </button>
-                  </div>
-                </>,
-                document.body
-              )}
+  {/* Menú flotante en portal */}
+  {showTools && menuPos && createPortal(
+    <>
+      {/* overlay para cerrar al hacer click fuera */}
+      <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
 
-              {/* Input */}
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={t(lang, 'chat', 'placeholder')}
-                className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${theme === 'dark'
-                  ? 'bg-slate-800 border-slate-700 text-slate-100'
-                  : 'bg-white border-slate-300 text-slate-900'
-                  } focus:outline-none`}
-              />
-            </div>
+      <div
+        ref={menuRef}
+        className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${
+          theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+        } max-h-[60vh] overflow-auto`}
+        role="menu"
+        style={{ top: menuPos.top, left: menuPos.left }}
+      >
+        <button
+          type="button"
+          onClick={() => { setShowTools(false); setShowCamera(true); }}
+          className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-t-xl flex items-center gap-2"
+          role="menuitem"
+        >
+          {t(lang, 'locator', 'takePhoto') || 'Tomar foto'}
+        </button>
 
-            {/* Botones (debajo en móvil) */}
+        <button
+          type="button"
+          onClick={() => { setShowTools(false); setShowQR(true); }}
+          className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-b-xl flex items-center gap-2"
+          role="menuitem"
+        >
+          {t(lang, 'locator', 'scanQR') || 'Escanear QR'}
+        </button>
+      </div>
+    </>,
+    document.body
+  )}
+
+  {/* Input */}
+  <input
+    type="text"
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    placeholder={t(lang, 'chat', 'placeholder')}
+    className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${
+      theme === 'dark'
+        ? 'bg-slate-800 border-slate-700 text-slate-100'
+        : 'bg-white border-slate-300 text-slate-900'
+    } focus:outline-none`}
+  />
+</div>
+
+
             <div className="mt-2 sm:mt-0 flex w-full sm:w-auto justify-end sm:justify-start gap-2">
               <button
                 type="submit"
@@ -383,7 +332,7 @@ export default function RAGChat({
               <button
                 type="button"
                 onClick={() => {
-                  const userFirst = messages.find((m) => m.role === 'user')?.content ?? t(lang, 'chat', 'title');
+                  const userFirst = messages.find(m => m.role === 'user')?.content ?? t(lang, 'chat', 'title');
                   setShowSummary(true);
                   setTitle(`${t(lang, 'summary', 'autoTitlePrefix')} ${userFirst.slice(0, 40)}`);
                   setAbstract(`${t(lang, 'summary', 'autoDescPrefix')} "${userFirst}".`);
@@ -402,7 +351,7 @@ export default function RAGChat({
         open={showCamera}
         onClose={() => setShowCamera(false)}
         onCapture={(file: Attachment) => {
-          setPendingAttachments((p) => [...p, file]);
+          setPendingAttachments(p => [...p, file]);
           setShowCamera(false);
         }}
       />
@@ -410,16 +359,19 @@ export default function RAGChat({
         open={showQR}
         onClose={() => setShowQR(false)}
         onResult={(code: string) => {
-          setPendingQR((p) => [...p, code]);
+          setPendingQR(p => [...p, code]);
           setShowQR(false);
         }}
       />
 
-      {/* Resumen */}
       <ChatSummaryModal
         open={showSummary}
         onClose={() => setShowSummary(false)}
-        onSubmit={(data) => { console.log('Resumen guardado:', data); setShowSummary(false); setMessages([]); }}
+        onSubmit={data => {
+          console.log('Resumen guardado:', data);
+          setShowSummary(false);
+          setMessages([]);
+        }}
         defaultTitle={title}
         defaultDescription={abstract}
         theme={theme}
