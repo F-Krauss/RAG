@@ -6,6 +6,8 @@ import MessageBubble from './MessageBubble';
 import ChatSummaryModal from './ChatSummaryModal';
 import type { Lang } from '../../lib/i18n';
 import { t } from '../../lib/i18n';
+import { postToN8N } from '../../lib/api';
+
 
 import CameraModal from './CameraModal';
 import QrScannerModal from './QrScannerModal';
@@ -63,7 +65,6 @@ export default function RAGChat({
     let left = r.left + window.scrollX;
     left = Math.min(Math.max(left, margin + window.scrollX), vw - approxWidth - margin + window.scrollX);
 
-    // 👇 en lugar de r.bottom + margin, usamos r.top - altura del menú - margin
     const estimatedMenuHeight = 100; // altura estimada (ajustable)
     const top = r.top + window.scrollY - estimatedMenuHeight - margin;
     setMenuPos({ top, left });
@@ -114,37 +115,70 @@ export default function RAGChat({
     setMessages((p) => [...p, userMsg, loading]);
 
     try {
-      // DEMO (sin backend)
-      await new Promise((r) => setTimeout(r, 350));
-      const citations: Citation[] = pendingQR.map((q, i) => ({ n: i + 1, title: 'Código QR', url: q }));
+      const payload = {
+        threadId: activeThreadId,
+        message: text,
+        qr: pendingQR,
+        attachments: pendingAttachments.map(a => ({
+          id: a.id, name: a.name, mime: a.mime, dataUrl: a.dataUrl,
+        })),
+        meta: { lang, theme, ts: Date.now() },
+      };
 
-      setMessages((prev) => {
+      type RawCitation = { n?: number; title?: string; url?: string };
+      const data: {
+        reply: string;
+        citations?: RawCitation[];
+        threadTitle?: string;
+      } = await postToN8N(payload);
+
+      // Normaliza a tu tipo interno (n es requerido)
+      const normalized: Citation[] | undefined = data.citations?.map((c, i) => ({
+        n: typeof c.n === 'number' ? c.n : i + 1,
+        title: c.title ?? 'Fuente',
+        url: c.url ?? '',
+      }));
+
+      setMessages(prev => {
         const updated = [...prev];
         updated[updated.length - 1] = {
           id: uuid(),
           role: 'assistant',
-          content: `(Demo) Procesé ${pendingAttachments.length} adjunto(s) y ${pendingQR.length} código(s) QR.`,
-          citations,
+          content: data.reply ?? '(sin respuesta)',
+          citations: normalized, // 👈 ahora coincide con tu tipo
         };
         return updated;
       });
 
-      setThreads((ts) =>
-        ts.map((h) =>
+
+      const newTitle = data.threadTitle || (text || 'Mensaje con adjuntos');
+      setThreads(ts =>
+        ts.map(h =>
           h.id === activeThreadId
             ? {
               ...h,
-              title: (text || 'Mensaje con adjuntos').slice(0, 42) + ((text || '').length > 42 ? '…' : ''),
+              title: newTitle.slice(0, 42) + (newTitle.length > 42 ? '…' : ''),
               updatedAt: Date.now(),
             }
             : h
         )
       );
+    } catch (err: any) {
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          id: uuid(),
+          role: 'assistant',
+          content: `Problema contactando al servidor: ${err?.message || err}`,
+        };
+        return updated;
+      });
     } finally {
       setBusy(false);
       setPendingAttachments([]);
       setPendingQR([]);
     }
+
   }
 
   // --- Finalizar chat
@@ -331,8 +365,8 @@ export default function RAGChat({
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={t(lang, 'chat', 'placeholder')}
                 className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${theme === 'dark'
-                    ? 'bg-slate-800 border-slate-700 text-slate-100'
-                    : 'bg-white border-slate-300 text-slate-900'
+                  ? 'bg-slate-800 border-slate-700 text-slate-100'
+                  : 'bg-white border-slate-300 text-slate-900'
                   } focus:outline-none`}
               />
             </div>
