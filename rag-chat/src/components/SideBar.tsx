@@ -84,7 +84,6 @@ export default function Sidebar({
         </aside>
       )}
 
-      {/* === MÓVIL (overlay) === */}
       {(variant === 'mobile' || variant === 'both') && (
         <div
           className={`fixed inset-0 z-50 sm:hidden transition-opacity duration-300 ${

@@ -44,13 +44,12 @@ export default function CameraModal({
   return (
     <div className="fixed inset-0 bg-black/60 z-50 grid place-items-center p-4">
       <div className="bg-white dark:bg-slate-900 rounded-2xl w-full max-w-md overflow-hidden border border-slate-200 dark:border-slate-700">
-        {/* Header */}
+
         <div className="p-3 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="font-medium">Cámara</div>
           <button onClick={onClose} className="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800">✕</button>
         </div>
 
-        {/* Video o mensaje de error */}
         <div className="p-3">
           {error ? (
             <div className="text-sm text-red-600">{error}</div>
@@ -59,7 +58,6 @@ export default function CameraModal({
           )}
         </div>
 
-        {/* Controles */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-2">
           <button onClick={onClose} className="px-3 py-1.5 rounded bg-slate-200 dark:bg-slate-700">Cerrar</button>
           <button
