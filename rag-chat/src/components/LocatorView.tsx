@@ -1,16 +1,15 @@
-// src/components/LocatorView.tsx
 import React from 'react';
 import type { Theme } from '../lib/types';
 import type { Lang } from '../lib/i18n';
 import { t } from '../lib/i18n';
 
-/** ==== Datos de ejemplo (mock) ==== */
+
 type Machine = { id: string; name: string; line: string; x: number; y: number };
 type Plant = {
   id: 'north' | 'south';
   name: string;
   lines: string[];
-  width: number;  // tamaño lógico del plano (viewport interno)
+  width: number; 
   height: number;
   machines: Machine[];
 };
@@ -46,7 +45,6 @@ const PLANTS: Plant[] = [
   },
 ];
 
-/** ==== Utilidades ==== */
 function groupByLine(machines: Machine[]) {
   return machines.reduce<Record<string, Machine[]>>((acc, m) => {
     (acc[m.line] ||= []).push(m);
@@ -65,7 +63,6 @@ function useSearch(query: string, items: Machine[]) {
   );
 }
 
-/** ==== Componente principal ==== */
 export default function LocatorView({
   theme,
   lang,
@@ -84,14 +81,12 @@ export default function LocatorView({
   const filtered = useSearch(query, activePlant.machines);
   const grouped = React.useMemo(() => groupByLine(filtered), [filtered]);
 
-  // Para “centrar” visualmente la máquina seleccionada, solo resaltamos (sin pan/zoom).
   const selected = activePlant.machines.find((m) => m.id === selectedId) || null;
 
   const isDark = theme === 'dark';
 
   return (
     <div className="flex flex-col gap-3 sm:gap-4">
-      {/* Título + Tabs de plantas */}
       <div className="flex flex-col sm:flex-row sm:items-end gap-2 sm:gap-3">
         <h1 className="text-xl font-semibold">{t(lang, 'locator', 'title')}</h1>
         <div className="flex gap-1">
@@ -122,9 +117,7 @@ export default function LocatorView({
         </div>
       </div>
 
-      {/* Layout: mapa + lista */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4">
-        {/* Mapa (SVG) */}
         <div className="lg:col-span-8">
           <div
             className={`rounded-2xl border ${
@@ -145,11 +138,9 @@ export default function LocatorView({
                   viewBox={`0 0 ${activePlant.width} ${activePlant.height}`}
                   className="w-full h-[280px] sm:h-[360px] lg:h-[460px] bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 rounded-xl"
                   onClick={(e) => {
-                    // deseleccionar si clic en fondo
                     if ((e.target as Element).tagName === 'svg') setSelectedId(null);
                   }}
                 >
-                  {/* “Bloques” de líneas: meramente decorativos */}
                   {activePlant.lines.map((line, idx) => {
                     const blockW = activePlant.width / activePlant.lines.length;
                     const x = idx * blockW;
@@ -178,7 +169,6 @@ export default function LocatorView({
                     );
                   })}
 
-                  {/* Máquinas */}
                   {activePlant.machines.map((m) => {
                     const sel = m.id === selectedId;
                     return (
@@ -211,7 +201,6 @@ export default function LocatorView({
                     );
                   })}
 
-                  {/* Si hay selección, halo */}
                   {selected && (
                     <circle
                       cx={selected.x}
@@ -226,7 +215,6 @@ export default function LocatorView({
                 </svg>
               </div>
 
-              {/* Leyenda simple */}
               <div className="mt-3 flex items-center gap-4 text-sm opacity-80">
                 <div className="flex items-center gap-2">
                   <span className="inline-block w-3 h-3 rounded-full bg-sky-500" />
@@ -241,14 +229,12 @@ export default function LocatorView({
           </div>
         </div>
 
-        {/* Lista + búsqueda */}
         <div className="lg:col-span-4">
           <div
             className={`rounded-2xl border ${
               isDark ? 'border-slate-800' : 'border-slate-200'
             } overflow-hidden`}
           >
-            {/* Buscador */}
             <div
               className={`p-3 border-b ${
                 isDark ? 'border-slate-800' : 'border-slate-200'
@@ -267,7 +253,6 @@ export default function LocatorView({
               />
             </div>
 
-            {/* Grupos por línea */}
             <div className="max-h-[460px] overflow-y-auto p-2">
               {Object.keys(grouped).length === 0 && (
                 <div className="px-3 py-8 text-center opacity-70">
@@ -312,8 +297,6 @@ export default function LocatorView({
             </div>
           </div>
 
-          {/* Tip: botón opcional para “Scan QR” (usa tu modal existente si quieres) */}
-          {/* <button className="mt-3 w-full px-3 py-2 rounded-xl border">🔍 {t(lang,'locator','scanQR')}</button> */}
         </div>
       </div>
     </div>

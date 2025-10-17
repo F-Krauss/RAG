@@ -79,22 +79,19 @@ export default function AppShell({
     try {
       mq.addEventListener('change', handler);
     } catch {
-      // Safari <14
-      // @ts-ignore
+
       mq.addListener(handler);
     }
     return () => {
       try {
         mq.removeEventListener('change', handler);
       } catch {
-        // Safari <14
-        // @ts-ignore
         mq.removeListener(handler);
       }
     };
   }, []);
 
-  const HEADER_H = 56; // px (h-14)
+  const HEADER_H = 56; 
   const sidebarW = isDesktop
     ? (collapsed ? SIDEBAR_W_COLLAPSED : SIDEBAR_W_OPEN)
     : 0;
@@ -105,13 +102,11 @@ export default function AppShell({
       className={`h-screen overflow-hidden flex flex-col ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
         }`}
     >
-      {/* HEADER FIJO */}
       <header
         className={`fixed top-0 inset-x-0 z-50 h-14 flex items-center justify-between px-3 border-b ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
           } bg-inherit`}
       >
         <div className="flex items-center gap-2">
-          {/* (Opcional) Botón menú móvil */}
           <button
             aria-label={t(lang, 'appShell', 'open_menu')}
             onClick={onOpenMenu}
@@ -120,7 +115,6 @@ export default function AppShell({
             ☰
           </button>
 
-          {/* Selector de base */}
           <div className="relative" ref={pickerRef}>
             <button
               onClick={() => setPicker((s) => !s)}
@@ -158,7 +152,6 @@ export default function AppShell({
           </div>
         </div>
 
-        {/* Usuario + idioma + tema */}
         <div className="flex items-center gap-1 sm:gap-2">
           <UserMenu onLogout={onLogout} />
           <select
@@ -177,7 +170,6 @@ export default function AppShell({
         </div>
       </header>
 
-      {/* BOTÓN COLAPSAR FIJO (debajo del header, pegado al borde del sidebar) */}
       <button
         onClick={() => setCollapsed((s) => !s)}
         className="hidden sm:flex items-center justify-center fixed z-40 rounded-full border shadow bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 w-6 h-6"
@@ -188,7 +180,6 @@ export default function AppShell({
         {collapsed ? '›' : '‹'}
       </button>
 
-      {/* SIDEBAR FIJO (desktop) */}
       <aside
         className={`hidden sm:block fixed top-14 bottom-0 left-0 border-r ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
           } bg-inherit overflow-y-auto`}
@@ -206,7 +197,6 @@ export default function AppShell({
         />
       </aside>
 
-      {/* CONTENIDO: solo esta columna hace scroll */}
       <main
         className="relative"
         style={{
@@ -219,7 +209,6 @@ export default function AppShell({
         </div>
       </main>
 
-      {/* 📱 Sidebar móvil superpuesto (se muestra solo en sm<) */}
       <Sidebar
         variant="mobile"
         theme={theme}

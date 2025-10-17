@@ -19,7 +19,7 @@ export default function RAGChat({
   theme: Theme;
   lang: Lang;
 }) {
-  // --- Estado base
+
   const initialThreads = loadJSON(LS.threads, [] as any[]);
   const [threads, setThreads] = useState(() => {
     if (initialThreads.length) return initialThreads;
@@ -42,13 +42,11 @@ export default function RAGChat({
     saveJSON(LS.messages(newT.id), []);
   }
 
-  // --- Adjuntos / QR
   const [pendingAttachments, setPendingAttachments] = useState<Attachment[]>([]);
   const [pendingQR, setPendingQR] = useState<string[]>([]);
   const [showCamera, setShowCamera] = useState(false);
   const [showQR, setShowQR] = useState(false);
 
-  // --- Menú ＋
   const [showTools, setShowTools] = useState(false);
   const anchorRef = useRef<HTMLButtonElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
@@ -58,7 +56,6 @@ export default function RAGChat({
   useEffect(() => saveJSON(LS.messages(activeThreadId), messages), [activeThreadId, messages]);
   useEffect(() => setMessages(loadJSON<Message[]>(LS.messages(activeThreadId), [])), [activeThreadId]);
 
-  // --- Posiciona el menú flotante
   useEffect(() => {
     if (!showTools || !anchorRef.current) return;
     const r = anchorRef.current.getBoundingClientRect();
@@ -71,7 +68,6 @@ export default function RAGChat({
     setMenuPos({ top, left });
   }, [showTools]);
 
-  // --- Reposiciona al hacer scroll o resize
   useEffect(() => {
     if (!showTools) return;
     const handler = () => {
@@ -93,7 +89,6 @@ export default function RAGChat({
     };
   }, [showTools]);
 
-  // --- Envío al servidor (con manejo robusto de error)
   async function sendMessage() {
     const text = input.trim();
     if ((!text && pendingAttachments.length === 0 && pendingQR.length === 0) || busy) return;
@@ -167,12 +162,10 @@ export default function RAGChat({
     }
   }
 
-  // --- Finalizar chat
   const [showSummary, setShowSummary] = useState(false);
   const [title, setTitle] = useState('');
   const [abstract, setAbstract] = useState('');
 
-  // --- Ajustes visuales
   const contentRef = useRef<HTMLDivElement | null>(null);
   const footerRef = useRef<HTMLDivElement | null>(null);
   const [footerH, setFooterH] = useState(0);
@@ -200,28 +193,24 @@ export default function RAGChat({
     };
   }, []);
 
-  // --- Render
   return (
     <div
       ref={contentRef}
-      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${
-        theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
-      }`}
+      className={`flex flex-col min-h-[100dvh] overflow-hidden w-full ${theme === 'dark' ? 'bg-slate-900 text-slate-100' : 'bg-white text-slate-900'
+        }`}
     >
-      {/* Botón de nuevo chat */}
       <div className="flex justify-end px-3 sm:px-4 pt-3">
         <button
-  type="button"
-  onClick={newChat}
-  className="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
-  title={t(lang, 'chat', 'newChat') || 'Nuevo chat'}
->
-  ＋ Nuevo chat
-</button>
+          type="button"
+          onClick={newChat}
+          className="px-3 py-1.5 rounded-lg border text-sm hover:bg-slate-100 dark:hover:bg-slate-800"
+          title={t(lang, 'chat', 'newChat') || 'Nuevo chat'}
+        >
+          ＋ Nuevo chat
+        </button>
 
       </div>
 
-      {/* Mensajes */}
       <div
         className="flex-1 overflow-y-auto px-3 sm:px-4 py-3 space-y-3"
         style={{ paddingBottom: `calc(${footerH}px + 12px)` }}
@@ -237,12 +226,10 @@ export default function RAGChat({
         )}
       </div>
 
-      {/* Footer */}
       <div
         ref={footerRef}
-        className={`fixed bottom-0 z-40 bg-inherit border-t ${
-          theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
-        }`}
+        className={`fixed bottom-0 z-40 bg-inherit border-t ${theme === 'dark' ? 'border-slate-800' : 'border-slate-200'
+          }`}
         style={{ left: contentInsets.left, right: contentInsets.right }}
       >
         <form
@@ -252,73 +239,66 @@ export default function RAGChat({
           }}
           className="w-full px-3 sm:px-4 pt-3 pb-4 sm:pb-5"
         >
-          {/* Input y botones */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:gap-2">
             <div className="flex items-center gap-2 w-full">
-  {/* ＋ ancla */}
-  <div className="relative shrink-0">
-    <button
-      ref={anchorRef}
-      type="button"
-      onClick={() => setShowTools((s) => !s)}
-      className="text-xl sm:text-2xl px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
-      aria-haspopup="menu"
-      aria-expanded={showTools}
-      title="+"
-    >
-      ＋
-    </button>
-  </div>
+              <div className="relative shrink-0">
+                <button
+                  ref={anchorRef}
+                  type="button"
+                  onClick={() => setShowTools((s) => !s)}
+                  className="text-xl sm:text-2xl px-2 py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+                  aria-haspopup="menu"
+                  aria-expanded={showTools}
+                  title="+"
+                >
+                  ＋
+                </button>
+              </div>
 
-  {/* Menú flotante en portal */}
-  {showTools && menuPos && createPortal(
-    <>
-      {/* overlay para cerrar al hacer click fuera */}
-      <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
+              {showTools && menuPos && createPortal(
+                <>
+                  <div className="fixed inset-0 z-[60]" onClick={() => setShowTools(false)} />
 
-      <div
-        ref={menuRef}
-        className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${
-          theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
-        } max-h-[60vh] overflow-auto`}
-        role="menu"
-        style={{ top: menuPos.top, left: menuPos.left }}
-      >
-        <button
-          type="button"
-          onClick={() => { setShowTools(false); setShowCamera(true); }}
-          className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-t-xl flex items-center gap-2"
-          role="menuitem"
-        >
-          {t(lang, 'locator', 'takePhoto') || 'Tomar foto'}
-        </button>
+                  <div
+                    ref={menuRef}
+                    className={`fixed z-[70] w-56 rounded-xl border shadow-lg ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'
+                      } max-h-[60vh] overflow-auto`}
+                    role="menu"
+                    style={{ top: menuPos.top, left: menuPos.left }}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => { setShowTools(false); setShowCamera(true); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-t-xl flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      {t(lang, 'locator', 'takePhoto') || 'Tomar foto'}
+                    </button>
 
-        <button
-          type="button"
-          onClick={() => { setShowTools(false); setShowQR(true); }}
-          className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-b-xl flex items-center gap-2"
-          role="menuitem"
-        >
-          {t(lang, 'locator', 'scanQR') || 'Escanear QR'}
-        </button>
-      </div>
-    </>,
-    document.body
-  )}
+                    <button
+                      type="button"
+                      onClick={() => { setShowTools(false); setShowQR(true); }}
+                      className="w-full text-left px-3 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-b-xl flex items-center gap-2"
+                      role="menuitem"
+                    >
+                      {t(lang, 'locator', 'scanQR') || 'Escanear QR'}
+                    </button>
+                  </div>
+                </>,
+                document.body
+              )}
 
-  {/* Input */}
-  <input
-    type="text"
-    value={input}
-    onChange={(e) => setInput(e.target.value)}
-    placeholder={t(lang, 'chat', 'placeholder')}
-    className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${
-      theme === 'dark'
-        ? 'bg-slate-800 border-slate-700 text-slate-100'
-        : 'bg-white border-slate-300 text-slate-900'
-    } focus:outline-none`}
-  />
-</div>
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                placeholder={t(lang, 'chat', 'placeholder')}
+                className={`flex-1 min-w-0 px-3 py-2 rounded-xl border text-sm sm:text-base ${theme === 'dark'
+                    ? 'bg-slate-800 border-slate-700 text-slate-100'
+                    : 'bg-white border-slate-300 text-slate-900'
+                  } focus:outline-none`}
+              />
+            </div>
 
 
             <div className="mt-2 sm:mt-0 flex w-full sm:w-auto justify-end sm:justify-start gap-2">
@@ -346,7 +326,6 @@ export default function RAGChat({
         </form>
       </div>
 
-      {/* Modales */}
       <CameraModal
         open={showCamera}
         onClose={() => setShowCamera(false)}

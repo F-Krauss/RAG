@@ -1,10 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import QrScanner from 'qr-scanner';
 
-// Nota: En versiones recientes no es necesario (ni soportado) QrScanner.WORKER_PATH.
-// Si tu bundler soporta "?worker", puedes importar el worker y pasarlo en "qrEngine".
-// Aquí usamos la resolución automática del paquete (simple y portable).
-
 export default function QrScannerModal({
   open,
   onClose,

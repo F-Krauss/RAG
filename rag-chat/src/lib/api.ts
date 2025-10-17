@@ -1,22 +1,24 @@
-export async function postToN8N(payload: any) {
-  const endpoint = import.meta.env.VITE_RAG_ENDPOINT; // 👈 sin fallback a /api/rag-chat
-  if (!endpoint) throw new Error('VITE_RAG_ENDPOINT is not set');
+export async function postToN8N(body: any) {
+  const url = import.meta.env.VITE_RAG_ENDPOINT;
+  if (!url) throw new Error('VITE_RAG_ENDPOINT is not set');
 
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-  const apiKey = import.meta.env.VITE_RAG_API_KEY;
-  if (apiKey) headers['X-Api-Key'] = apiKey;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(import.meta.env.VITE_RAG_API_KEY
+        ? { 'X-Api-Key': import.meta.env.VITE_RAG_API_KEY }
+        : {}),
+    },
+    body: JSON.stringify(body),
+  });
 
-  const res = await fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(payload) });
+  const raw = await res.text();               
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${raw.slice(0, 200)}`);
 
-  // Defensa: si el server envía HTML (p.ej. 404 page), evita .json() y muestra mensaje claro.
-  const ct = res.headers.get('content-type') || '';
-  if (!res.ok) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Webhook ${res.status}: ${text.slice(0, 300)}`);
+  try {
+    return raw ? JSON.parse(raw) : { reply: '(empty response)', citations: [], threadTitle: '' };
+  } catch {
+    return { reply: raw || '(empty response)', citations: [], threadTitle: '' };
   }
-  if (!ct.includes('application/json')) {
-    const text = await res.text().catch(() => '');
-    throw new Error(`Respuesta no-JSON del webhook (content-type=${ct}). Cuerpo: ${text.slice(0, 300)}`);
-  }
-  return res.json();
 }
